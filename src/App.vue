@@ -1,47 +1,96 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import { ref, reactive, onMounted, watch } from 'vue';
+import { uid } from 'uid';
+import TheForm from './components/TheForm.vue';
+import TheHeader from './components/TheHeader.vue';
+import PacienteLista from './components/PacienteLista.vue';
+
+const pacientes = ref([]);
+
+const paciente = reactive({
+  id: null,
+  nombre: '',
+  propietario: '',
+  email: '',
+  alta: '',
+  sintomas: ''
+});
+
+onMounted(() => {
+  pacientes.value = JSON.parse(localStorage.getItem('pacientes')) ?? [];
+});
+
+const guardarPaciente = () => {
+  if ( paciente.id ) {
+    const index = pacientes.value.findIndex(pacienteState => pacienteState.id === paciente.id);
+    pacientes.value[index] = {...paciente};
+  } else {
+    pacientes.value.push({...paciente, id: uid()});
+  }
+  paciente.nombre = '';
+  paciente.propietario = '';
+  paciente.email = '';
+  paciente.alta = '';
+  paciente.sintomas = '';
+  paciente.id = null;
+}
+
+const actualizarPaciente = (id) => {
+  const pacienteEditar = pacientes.value.filter(paciente => paciente.id === id)[0];
+  Object.assign(paciente, pacienteEditar);
+}
+
+const eliminarPaciente = (id) => {
+  pacientes.value = pacientes.value.filter(paciente => paciente.id !== id);
+}
+
+const guardarStorage = () => {
+  localStorage.setItem('pacientes', JSON.stringify(pacientes.value));
+}
+
+watch(pacientes, () => {
+  guardarStorage();
+}, {
+  deep: true
+});
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
+  <div class="container mx-auto mt-12">
+    <TheHeader />
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+    <div class="mt-12 md:flex">
+      <TheForm
+        v-model:nombre="paciente.nombre"
+        v-model:propietario="paciente.propietario"
+        v-model:email="paciente.email"
+        v-model:alta="paciente.alta"
+        v-model:sintomas="paciente.sintomas"
+        @guardar-paciente="guardarPaciente"
+        :id="paciente.id"
+      />
+
+      <div class="md:w-1/2 md:h-screen overflow-y-scroll">
+        <h3 class="font-black text-3xl text-center">
+          Administra tus
+          <span class="text-indigo-600 font-bold">Pacientes</span>
+        </h3>
+
+        <div v-if="pacientes.length > 0">
+          <p class="text-lg mt-5 text-center mb-10">
+            Información de
+            <span class="text-indigo-600 font-bold">Pacientes</span>
+          </p>
+          <PacienteLista
+            v-for="paciente in pacientes"
+            :key="paciente.nombre"
+            :paciente="paciente"
+            @actualizar-paciente="actualizarPaciente"
+            @eliminar-paciente="eliminarPaciente"
+          />
+        </div>
+        <p v-else class="mt-10 text-2xl text-center">No hay pacientes</p>
+      </div>
     </div>
-  </header>
-
-  <main>
-    <TheWelcome />
-  </main>
+  </div>
 </template>
-
-<style scoped>
-header {
-  line-height: 1.5;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-}
-</style>
